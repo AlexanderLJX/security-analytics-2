@@ -1,0 +1,137 @@
+# Configuration file for Phishing Detection LLM with GRPO
+# Edit these parameters to customize training and inference
+
+# ============================================================================
+# MODEL CONFIGURATION
+# ============================================================================
+model:
+  base_model: "unsloth/Qwen3-4B-Base"
+  max_seq_length: 2048  # Maximum sequence length (512-8192)
+  lora_rank: 32  # LoRA rank (8, 16, 32, 64, 128)
+  load_in_4bit: false  # Use 4-bit quantization (true/false)
+  gpu_memory_utilization: 0.9  # GPU memory to use (0.5-0.95)
+
+# ============================================================================
+# DATASET CONFIGURATION
+# ============================================================================
+dataset:
+  train_path: "./Enron.csv"
+  content_column: "text"  # Column with email content
+  label_column: "label"  # Column with labels
+  pre_finetune_samples: 100  # Samples for format learning (50-200)
+  max_email_length: 10000  # Maximum email characters
+  min_email_length: 20  # Minimum email characters
+
+# ============================================================================
+# TRAINING CONFIGURATION
+# ============================================================================
+training:
+  # Pre-finetuning (SFT) settings
+  sft:
+    num_epochs: 2
+    batch_size: 1
+    gradient_accumulation_steps: 2
+    learning_rate: 2e-4
+    warmup_steps: 5
+    weight_decay: 0.001
+
+  # GRPO settings
+  grpo:
+    max_steps: 500  # Total training steps (100-2000)
+    batch_size: 1
+    gradient_accumulation_steps: 4
+    num_generations: 4  # Completions per prompt (2-8)
+    learning_rate: 5e-6
+    warmup_ratio: 0.1
+    weight_decay: 0.001
+    temperature: 1.0
+    save_steps: 100
+
+# ============================================================================
+# REWARD FUNCTION WEIGHTS
+# ============================================================================
+rewards:
+  # Format matching rewards
+  format_exact: 3.0  # Reward for exact format match
+  format_token_present: 0.5  # Reward per correct token
+  format_token_missing: -1.0  # Penalty per missing token
+
+  # Classification rewards
+  correct_classification: 5.0  # Reward for correct prediction
+  partial_match: 2.0  # Reward for partial match
+  false_negative_penalty: -5.0  # Penalty for missing phishing (severe)
+  false_positive_penalty: -2.0  # Penalty for false alarm (less severe)
+  no_answer_penalty: -3.0  # Penalty for no classification
+
+# ============================================================================
+# INFERENCE CONFIGURATION
+# ============================================================================
+inference:
+  temperature: 0.7  # Sampling temperature (0.1-1.5)
+  top_k: 50  # Top-k sampling
+  top_p: 0.9  # Nucleus sampling
+  max_new_tokens: 1024  # Maximum tokens to generate
+  batch_size: 4  # Batch size for batch prediction
+
+# ============================================================================
+# OUTPUT CONFIGURATION
+# ============================================================================
+output:
+  model_save_path: "phishing_grpo_lora"
+  output_dir: "phishing_llm_outputs"
+  log_every_n_steps: 5  # Logging frequency
+  save_total_limit: 3  # Maximum checkpoints to keep
+
+# ============================================================================
+# CUSTOM TOKENS
+# ============================================================================
+tokens:
+  reasoning_start: "<start_analysis>"
+  reasoning_end: "<end_analysis>"
+  solution_start: "<CLASSIFICATION>"
+  solution_end: "</CLASSIFICATION>"
+
+# ============================================================================
+# SYSTEM PROMPT
+# ============================================================================
+system_prompt: |
+  You are an expert cybersecurity analyst specializing in phishing email detection.
+  Analyze the given email carefully and provide your reasoning.
+  Place your analysis between <start_analysis> and <end_analysis>.
+  Identify phishing indicators such as:
+  - Suspicious sender addresses or domains
+  - Urgent or threatening language
+  - Requests for sensitive information
+  - Unusual URLs or links
+  - Grammar and spelling errors
+  - Spoofed headers or authentication failures
+  Then, provide your classification between <CLASSIFICATION></CLASSIFICATION>.
+  Respond with either "PHISHING" or "LEGITIMATE".
+
+# ============================================================================
+# HARDWARE SETTINGS
+# ============================================================================
+hardware:
+  # Adjust based on your GPU
+  # For 8GB GPU: reduce lora_rank to 16, gradient_accumulation_steps to 8
+  # For 16GB GPU: default settings work
+  # For 24GB+ GPU: increase lora_rank to 64, max_seq_length to 4096
+
+  profiles:
+    low_memory:  # 8GB GPU
+      lora_rank: 16
+      max_seq_length: 1024
+      gradient_accumulation_steps: 8
+      num_generations: 2
+
+    standard:  # 16GB GPU
+      lora_rank: 32
+      max_seq_length: 2048
+      gradient_accumulation_steps: 4
+      num_generations: 4
+
+    high_performance:  # 24GB+ GPU
+      lora_rank: 64
+      max_seq_length: 4096
+      gradient_accumulation_steps: 2
+      num_generations: 8

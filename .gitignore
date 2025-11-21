@@ -1,0 +1,15 @@
+.venv
+/unsloth_compiled_cache
+.claude/settings.local.json
+
+# LLM-GRPO folder contains all LLM training files
+/LLM-GRPO/phishing_llm_outputs
+/LLM-GRPO/training_*.txt
+/LLM-GRPO/evaluation_*.txt
+/LLM-GRPO/phishing_grpo_lora
+/LLM-GRPO/grpo_trainer_lora_model
+
+# Other
+/Security-Analytics-Combined-
+/LLM-GRPO/unsloth_compiled_cache
+/XgBoost/__pycache__
