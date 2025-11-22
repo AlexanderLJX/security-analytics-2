@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 # Configuration
 BASE_MODEL = "unsloth/Qwen3-4B-Base"
-LORA_PATH = "phishing_grpo_lora"
+LORA_PATH = "AlexanderLJX/phishing-detection-qwen3-grpo"  # HuggingFace model
 DATASET_PATH = "./Enron.csv"
 MAX_SEQ_LENGTH = 2048
 EVAL_SAMPLES = 500  # Number of samples to evaluate

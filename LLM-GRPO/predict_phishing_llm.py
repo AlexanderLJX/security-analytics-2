@@ -17,7 +17,7 @@ import argparse
 # Must match training configuration
 MAX_SEQ_LENGTH = 2048
 LORA_RANK = 32
-LORA_PATH = "phishing_grpo_lora"
+LORA_PATH = "AlexanderLJX/phishing-detection-qwen3-grpo"  # HuggingFace model
 
 REASONING_START = "<start_analysis>"
 REASONING_END = "<end_analysis>"
