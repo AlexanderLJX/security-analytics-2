@@ -67,6 +67,7 @@ def main():
         ('matplotlib', None),
         ('seaborn', None),
         ('tqdm', None),
+        ('tldextract', 'tldextract'),
     ]
 
     basic_ok = all(check_package(pkg, imp) for pkg, imp in basic_packages)
