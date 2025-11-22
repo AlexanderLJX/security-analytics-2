@@ -206,9 +206,37 @@ sorted_orig = sorted(original_importance.items(), key=lambda x: x[1], reverse=Tr
 for i, (feat_name, importance) in enumerate(sorted_orig[:10], 1):
     print(f"   {i}. {feat_name}: {importance:.4f}")
 
-# 12) Save model
+# 12) Final Evaluation Summary
+print("\n[12] Final Evaluation Summary on Test Set:")
 
-print("\n[12] Saving model...")
+# Test set statistics
+total_test_samples = len(y_test)
+legit_test_samples = (y_test == 0).sum()
+phishing_test_samples = (y_test == 1).sum()
+print(f"   - Total samples: {total_test_samples}")
+print(f"   - Legitimate (0): {legit_test_samples} samples")
+print(f"   - Phishing (1):   {phishing_test_samples} samples")
+
+# Performance metrics
+TN, FP, FN, TP = cm.ravel()
+total_predictions = TN + FP + FN + TP
+correct_predictions = TN + TP
+total_predicted_positive = TP + FP
+total_actual_positive = TP + FN
+
+print("\n   Model Evaluation Metrics (at optimal threshold):")
+print(f"   - Accuracy:  {acc:.2%} ({correct_predictions}/{total_predictions} correct)")
+print(f"   - Precision: {prec_th:.2%} ({TP} TP / {total_predicted_positive} predicted positive)")
+print(f"   - Recall:    {rec_th:.2%} ({TP} TP / {total_actual_positive} actual positive)")
+print(f"   - F1-Score:  {f1_score(y_test, test_preds):.2%}")
+print(f"   - AUC-PR:    {test_avg_prec:.2%}")
+print(f"   - ROC-AUC:   {test_rocauc:.2%}")
+print(f"   - Matthews Corr: {mcc:.3f}")
+print(f"   - Brier Score:   {test_brier:.4f} (lower is better)")
+print(f"   - Confusion Matrix: [TN={TN}, FP={FP}], [FN={FN}, TP={TP}]")
+
+# 13) Save model
+print("\n[13] Saving model...")
 model_data = {
     "pipeline": pipeline,
     "threshold": float(best_threshold),
@@ -231,11 +259,6 @@ model_data = {
 joblib.dump(model_data, "phishing_text_model.joblib")
 print("   Model saved to: phishing_text_model.joblib")
 
-# Save raw XGBoost model for compatibility
-booster = pipeline.named_steps["xgb"].get_booster()
-booster.save_model("phishing_text_model.xgb")
-print("   Raw XGBoost model saved to: phishing_text_model.xgb")
-
 # Also write a standalone JSON report for convenient consumption
 report = {
     "dataset": "Enron.csv",
@@ -249,8 +272,6 @@ try:
     # Attach model file size if available
     if os.path.exists("phishing_text_model.joblib"):
         report["model_size_bytes"] = os.path.getsize("phishing_text_model.joblib")
-    if os.path.exists("phishing_text_model.xgb"):
-        report["xgb_model_size_bytes"] = os.path.getsize("phishing_text_model.xgb")
     with open("metrics_report.json", "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
     print("   Metrics report written to: metrics_report.json")
