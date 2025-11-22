@@ -1,289 +1,188 @@
-# XGBOOST_MODEL
+# XGBoost Phishing Email Detection
 
-## Text-Based Phishing Email Detection
+This project implements a high-performance phishing email detection system using an XGBoost classifier. It analyzes the subject and body of emails, extracts a rich set of text-based features, and predicts whether an email is phishing or legitimate.
 
-A machine learning system for detecting phishing emails using XGBoost classifier. The model analyzes email content (subject and body) to identify phishing attempts with high accuracy.
+The system includes scripts for training, evaluation, batch prediction, and a FastAPI server for real-time inference with Splunk integration.
 
-## 🎯 Features
+## Features
 
-- **Text-based Analysis**: Extracts sophisticated features from email subject and body text
-- **XGBoost Classifier**: Utilizes gradient boosting for robust classification
-- **Feature Engineering**: 
-  - URL analysis (count, suspicious domains, IP addresses)
-  - Keyword detection (urgency, financial, security, deceptive words)
-  - Character analysis (special characters, entropy, uppercase ratio)
-  - Length and word count metrics
-- **Model Interpretability**: SHAP analysis for feature importance
-- **Batch & Single Predictions**: Support for both individual and bulk email analysis
+- **High-Performance Model**: Utilizes XGBoost for fast and accurate classification.
+- **Rich Feature Engineering**: Extracts over 50 features from email text, including:
+  - Length and word counts.
+  - Ratios of special characters, digits, and uppercase letters.
+  - Shannon entropy to detect randomness.
+  - Counts of suspicious keywords (urgency, financial, security).
+  - URL analysis (count, length, IP addresses, suspicious TLDs).
+  - Structural patterns (`click here`, `verify your account`, etc.).
+- **Command-Line Interface**: Easy-to-use scripts for training, evaluation, and batch prediction.
+- **Real-time API**: A FastAPI server to serve predictions over HTTP.
+- **Splunk Integration**: The API server logs prediction events and errors to Splunk for monitoring and security analytics.
+- **Comprehensive Evaluation**: Training script generates a detailed performance report (`metrics_report.json`) and saves the model for deployment.
 
-## 📋 Requirements
+## Project Structure
 
-Install dependencies using:
+```
+XgBoost/
+├── Enron.csv                   # Dataset for training (must be obtained separately)
+├── api_server_fastapi.py       # FastAPI server for real-time predictions
+├── feature_extraction_text.py  # Core logic for text feature extraction
+├── predict_phishing.py         # CLI for model evaluation and batch prediction
+├── train_text_phishing.py      # Script to train the XGBoost model
+├── requirements.txt            # Python dependencies
+├── phishing_text_model.joblib  # Saved model file (output of training)
+└── metrics_report.json         # Performance metrics report (output of training)
+```
+
+## Setup and Installation
+
+### 1. Prerequisites
+
+- Python 3.8+
+- Git
+
+### 2. Clone the Repository
+
 ```bash
-pip install -r requirements.txt
+git clone <your-repo-url>
+cd security-analytics-2/XgBoost
 ```
 
-**Dependencies:**
-- pandas
-- numpy
-- scikit-learn
-- xgboost
-- shap
-- tldextract
-- joblib
-- matplotlib
+### 3. Install Dependencies
 
-## 🗂️ Project Structure
+# Core ML libraries
+scikit-learn>=1.3.0
+xgboost>=1.7.0
+joblib>=1.3.0
+pandas>=2.0.0
+numpy>=1.24.0
 
-```
-XGBOOST_MODEL/
-├── Enron.csv                      # Training dataset (Enron email corpus)
-├── train_text_phishing.py         # Main training script
-├── feature_extraction_text.py     # Feature engineering module
-├── predict_phishing.py            # Prediction interface
-├── requirements.txt               # Python dependencies
-├── README.md                      # Project documentation
-```
+# Feature extraction
+tldextract>=3.4.0
 
-## 🚀 Quick Start
+# API server
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
+python-multipart>=0.0.6
 
-### 1. Create and Activate Virtual Environment
+# Splunk integration
+requests>=2.31.0
 
-```powershell
-# Create virtual environment
+It is recommended to use a virtual environment to manage dependencies.
+
+```bash
+# Create and activate a virtual environment (e.g., using venv)
 python -m venv venv
+source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
 
-# Activate virtual environment
-.\venv\Scripts\Activate.bat
-```
-
-### 2. Install Dependencies
-
-```powershell
+# Install the required packages
 pip install -r requirements.txt
 ```
 
-### 3. Training the Model
+### 4. Download the Dataset
 
-Train the XGBoost classifier on the Enron dataset:
+The training script uses the `Enron.csv` dataset. You can find a version of this dataset on Kaggle: Phishing Email Dataset.
 
-```powershell
+Download `Enron.csv` and place it in the `XgBoost/` directory.
+
+## Usage
+
+### 1. Train the Model
+
+To train the XGBoost classifier, run the training script. This will process `Enron.csv`, train the model, and save `phishing_text_model.joblib` and `metrics_report.json`.
+
+```bash
 python train_text_phishing.py
 ```
 
-This will:
-- Load and preprocess the Enron email dataset
-- Extract text-based features from subject and body
-- Train an XGBoost model with hyperparameter tuning
-- Evaluate performance on validation and test sets
-- Save the trained model as `phishing_text_model.joblib`
-- Generate SHAP analysis plots for feature importance
+The script will output a detailed evaluation summary on the holdout test set.
 
-### 4. Configure Splunk (Optional)
+### 2. Evaluate the Model
 
-Edit `.env` file and add your Splunk credentials:
+You can evaluate the trained model against any labeled CSV file containing `subject`, `body`, and `label` columns.
+
 ```bash
-SPLUNK_HEC_URL=https://your-splunk.com:8088/services/collector
-SPLUNK_TOKEN=your-hec-token-here
-SPLUNK_INDEX=security
+# Example: Evaluate on the test portion of the Enron dataset
+python predict_phishing.py evaluate --input Enron.csv --model phishing_text_model.joblib
 ```
 
-### 5. Start API Server
+### 3. Run Batch Predictions
 
-```powershell
-python api_server_fastapi.py 8002
-```
-**Note:** Port 8002 is used to avoid conflicts (Splunk uses 8000, Random-Forest uses 8001). You can specify any available port as an argument.
+To predict on a CSV file containing `subject` and `body` columns, use the `batch` command. The predictions will be saved to a new CSV file.
 
-- API Docs: http://localhost:8002/docs
-- Alerts auto-send to Splunk when phishing detected
-
-### 6. Test Prediction
-
-#### Example: Clearly Phishing Email
-```powershell
-$body = @{
-    subject = "ACTION REQUIRED: Confirm Your Identity NOW"
-    body = "Dear Valued Customer, We detected unauthorized access to your account. Click this link immediately to verify: http://account-secure-login.tk/verify.php?id=12345. Failure to verify within 2 hours will result in permanent account closure. Please provide your full credentials including password and security answers."
-} | ConvertTo-Json
-
-Invoke-RestMethod -Uri "http://localhost:8002/predict" -Method POST -Body $body -ContentType "application/json"
+```bash
+python predict_phishing.py batch --input your_emails.csv --output predictions.csv
 ```
 
-#### Example: Clearly Legitimate Email
-```powershell
-$body = @{
-    subject = "Monthly Project Status Report"
-    body = "Hello Team, Here's our project status for November: Milestone 1 completed ahead of schedule, testing phase begins next week, and the client presentation is scheduled for December 5th. Please update your task status in Jira by Friday. Let me know if you have any questions. Thanks, Michael"
-} | ConvertTo-Json
+## API Server
 
-Invoke-RestMethod -Uri "http://localhost:8002/predict" -Method POST -Body $body -ContentType "application/json"
+The project includes a FastAPI server for serving real-time predictions. It also logs detailed events to a configured Splunk instance.
+
+### 1. Configure Splunk (Optional)
+
+The API server sends logs to Splunk via the HTTP Event Collector (HEC). Set the following environment variables to enable this feature:
+
+```bash
+export SPLUNK_HEC_URL="https://your-splunk-server:8088/services/collector"
+export SPLUNK_HEC_TOKEN="your-hec-token"
+export SPLUNK_INDEX="phishing_detection"
 ```
 
-### 2. Making Predictions (Alternative Methods)
+### 2. Run the Server
 
-#### Single Email Prediction
+Start the server using `uvicorn`. You can specify a port as a command-line argument.
 
-```python
-from predict_phishing import predict_email
+```bash
+# Run on default port 8000
+python api_server_fastapi.py
 
-result = predict_email(
-    subject="URGENT: Verify your account now!",
-    body="Click here to verify your account or it will be suspended."
-)
-
-print(f"Is Phishing: {result['is_phishing']}")
-print(f"Confidence: {result['confidence']:.2%}")
-print(f"Probability: {result['phishing_probability']:.2%}")
+# Run on a custom port
+python api_server_fastapi.py 8080
 ```
 
-#### Batch Prediction
+Once running, the API documentation will be available at `http://localhost:8000/docs`.
 
-```python
-from predict_phishing import predict_batch
+### API Endpoints
 
-predict_batch(
-    csv_path="emails.csv",
-    output_path="predictions.csv"
-)
-```
+#### `POST /predict`
 
-#### Command-line Interactive Mode
+Predicts a single email.
 
-```powershell
-python predict_phishing.py
-```
+- **Request Body**:
+  ```json
+  {
+    "subject": "Urgent: Verify Your Account",
+    "body": "Click here to confirm your details or your account will be suspended."
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "is_phishing": true,
+    "phishing_probability": 0.987,
+    "confidence": 0.974,
+    "label": "Phishing"
+  }
+  ```
 
-## 🌐 API Usage
+#### `POST /predict/csv`
 
-**Predict Single Email via API:**
-```powershell
-$body = @{
-    subject = "Account Security Alert"
-    body = "We noticed unusual activity on your account"
-} | ConvertTo-Json
+Performs batch predictions on an uploaded CSV file.
 
-Invoke-RestMethod -Uri "http://localhost:8002/predict" -Method POST -Body $body -ContentType "application/json"
-```
+- **Request**: `multipart/form-data` request with a file attached. The CSV must contain `subject` and `body` columns.
+- **Example `curl` command**:
+  ```bash
+  curl -X POST "http://localhost:8000/predict/csv" -F "file=@/path/to/your_emails.csv"
+  ```
+- **Response**: A JSON object containing a summary and a list of predictions for each row.
 
-**CSV File Upload (Bulk Processing):**
-```powershell
-# Upload CSV file with 'subject' and 'body' columns
-curl.exe -X POST "http://localhost:8002/predict/csv" -F "file=@test_emails.csv"
-```
+#### `GET /health`
 
-CSV file format:
-```csv
-subject,body
-"URGENT: Verify Account","Click here immediately: http://phishing.tk"
-"Team Meeting","Hi everyone, meeting at 2pm in Conference Room B"
-```
+A simple health check endpoint.
 
-## 🔗 Splunk Integration
-
-When configured, the API automatically sends detailed alerts to Splunk for all predictions.
-
-**What gets sent:**
-- Alert metadata (timestamp, severity, model version)
-- Email characteristics (subject, body length, hashes)
-- Prediction results (classification, probability, confidence)
-- Feature indicators (URLs, domains, keyword counts, entropy)
-- Recommended action based on risk level
-
-**Splunk Query Examples:**
-```spl
-index=security sourcetype=phishing_prediction
-| stats count by event.prediction
-
-index=security sourcetype=phishing_prediction event.severity IN (HIGH, MEDIUM)
-| table event.timestamp, event.email_subject, event.phishing_probability
-```
-
-## 📊 Model Performance
-
-The model achieves strong performance metrics:
-- **Accuracy**: High overall classification accuracy
-- **Precision/Recall**: Balanced detection of phishing emails
-- **ROC-AUC**: Excellent discriminative ability
-- **F1-Score**: Strong harmonic mean of precision and recall
-
-Performance metrics are displayed during training and saved with the model.
-
-## 🔍 Feature Extraction
-
-The system extracts multiple categories of features:
-
-### URL Features
-- Total URL count
-- Suspicious domain detection
-- IP address usage
-- URL entropy
-
-### Keyword Features
-- Urgency indicators (urgent, immediately, action required)
-- Financial terms (account, bank, payment)
-- Security keywords (password, verify, confirm)
-- Deceptive phrases (click here, dear customer, winner)
-
-### Text Characteristics
-- Length metrics (subject, body, total)
-- Word counts
-- Special character ratios
-- Uppercase character ratio
-- Text entropy (randomness measure)
-
-## 🛠️ Model Architecture
-
-- **Algorithm**: XGBoost (Extreme Gradient Boosting)
-- **Pipeline**: StandardScaler → XGBClassifier
-- **Hyperparameters**: Tuned for optimal performance
-  - Learning rate, max depth, n_estimators
-  - Subsample and colsample ratios
-  - Scale_pos_weight for imbalanced data
-- **Threshold**: Optimized using precision-recall curve
-
-## 📈 SHAP Analysis
-
-The project includes SHAP (SHapley Additive exPlanations) analysis to understand:
-- Which features contribute most to predictions
-- How different features impact individual predictions
-- Global feature importance across all samples
-
-SHAP plots are automatically generated during training.
-
-## 💾 Saved Model
-
-The trained model is saved as `phishing_text_model.joblib` containing:
-- Trained pipeline (scaler + classifier)
-- Optimal threshold for classification
-- Training metadata
-
-## 📝 Dataset
-
-The project uses the **Enron email dataset** which contains:
-- Legitimate emails from Enron corporation
-- Labeled phishing examples
-- Columns: `subject`, `body`, `label` (0=legitimate, 1=phishing)
-
-## 🔒 Use Cases
-
-- **Email Security**: Filter incoming emails for phishing attempts
-- **User Protection**: Warn users about suspicious emails
-- **Security Auditing**: Analyze email logs for threats
-- **Research**: Study phishing patterns and detection techniques
-
-## 🤝 Contributing
-
-Contributions are welcome! Areas for improvement:
-- Additional feature engineering
-- Alternative ML algorithms
-- Real-time detection capabilities
-- Integration with email clients
-
-## 📄 License
-
-This project is available for educational and research purposes.
-
-## ⚠️ Disclaimer
-
-This tool is for educational and research purposes. Always use multiple layers of security when dealing with potential phishing threats.
+- **Response**:
+  ```json
+  {
+    "status": "healthy"
+  }
+  ```

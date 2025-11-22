@@ -284,7 +284,7 @@ async def health():
 
 if __name__ == "__main__":
     # Allow custom port via command line argument
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8002
     
     print("Starting Phishing Detection API Server...")
     print(f"API available at: http://localhost:{port}")

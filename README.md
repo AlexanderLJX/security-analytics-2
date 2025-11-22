@@ -43,7 +43,6 @@ security-analytics-2/
 │   ├── train_text_phishing.py        # Training script
 │   ├── predict_phishing.py           # Prediction interface
 │   ├── feature_extraction_text.py    # Advanced feature engineering
-│   ├── evaluate_benchmark.py         # Performance benchmarks
 │   ├── api_server_fastapi.py         # REST API server (port 8002)
 │   ├── phishing_text_model.joblib    # Trained model artifact
 │   ├── metrics_report.json           # Performance metrics
