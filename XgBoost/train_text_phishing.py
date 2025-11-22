@@ -3,7 +3,7 @@
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.metrics import (average_precision_score, roc_auc_score, precision_recall_curve, 
                             classification_report, confusion_matrix, accuracy_score, f1_score,
                             precision_score, recall_score, matthews_corrcoef, brier_score_loss)
@@ -94,7 +94,7 @@ pipeline = Pipeline([
 
 # 6) Train with early stopping
 print("\n[6] Training model with early stopping...")
-print("   (This may take a few minutes...)")
+print("   (This will take several minutes...)")
 train_start = time.perf_counter()
 
 # Transform training data through the pipeline steps (except xgb)
@@ -148,18 +148,13 @@ best_threshold = thresholds[best_idx] if best_idx < len(thresholds) else 0.5
 print(f"   Best threshold: {best_threshold:.4f}")
 print(f"   Best F1 score: {np.max(f1_scores):.4f}")
 
+
+
 # 10) Classification report with optimal threshold
 print("\n[10] Classification Report (with optimal threshold):")
 test_preds = (test_probs >= best_threshold).astype(int)
 print(classification_report(y_test, test_preds, target_names=["Legitimate", "Phishing"]))
-
-print("\nConfusion Matrix:")
 cm = confusion_matrix(y_test, test_preds)
-print(cm)
-print(f"\nTrue Negatives: {cm[0,0]}")
-print(f"False Positives: {cm[0,1]}")
-print(f"False Negatives: {cm[1,0]}")
-print(f"True Positives: {cm[1,1]}")
 
 # Additional scalar metrics at best threshold
 acc = accuracy_score(y_test, test_preds)
@@ -167,19 +162,14 @@ prec_th = precision_score(y_test, test_preds, zero_division=0)
 rec_th = recall_score(y_test, test_preds, zero_division=0)
 mcc = matthews_corrcoef(y_test, test_preds)
 fpr = cm[0,1] / max(1, (cm[0,1] + cm[0,0]))
-print(f"\nAccuracy: {acc:.4f}")
-print(f"Precision: {prec_th:.4f}")
-print(f"Recall: {rec_th:.4f}")
-print(f"Matthews CorrCoef: {mcc:.4f}")
-print(f"False Positive Rate: {fpr:.4f}")
 
 # 11) Feature importance
 print("\n[11] Feature Importance Analysis:")
-feature_importance = pipeline.named_steps["xgb"].feature_importances_
+feature_importance = pipeline.named_steps['xgb'].feature_importances_
 print(f"   Total features (after polynomial interactions): {len(feature_importance)}")
 
 # Get polynomial feature names
-poly_feature_names = pipeline.named_steps["poly"].get_feature_names_out(X.columns)
+poly_feature_names = pipeline.named_steps['poly'].get_feature_names_out(X.columns)
 
 # Create importance dataframe
 importance_df = pd.DataFrame({
@@ -256,8 +246,8 @@ model_data = {
     }
 }
 
-joblib.dump(model_data, "phishing_text_model.joblib")
-print("   Model saved to: phishing_text_model.joblib")
+joblib.dump(model_data, "XGBoost\\phishing_text_model.joblib")
+print("   Model saved to: XGBoost\\phishing_text_model.joblib")
 
 # Also write a standalone JSON report for convenient consumption
 report = {
@@ -270,9 +260,9 @@ report = {
 }
 try:
     # Attach model file size if available
-    if os.path.exists("phishing_text_model.joblib"):
-        report["model_size_bytes"] = os.path.getsize("phishing_text_model.joblib")
-    with open("metrics_report.json", "w", encoding="utf-8") as f:
+    if os.path.exists("XGBoost\\phishing_text_model.joblib"):
+        report["model_size_bytes"] = os.path.getsize("XGBoost\\phishing_text_model.joblib")
+    with open("XBoost\\metrics_report.json", "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
     print("   Metrics report written to: metrics_report.json")
 except Exception:

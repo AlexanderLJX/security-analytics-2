@@ -1,0 +1,30 @@
+{
+  "dataset": "Enron.csv",
+  "n_train": 20697,
+  "n_val": 4436,
+  "n_test": 4436,
+  "threshold": 0.41883495450019836,
+  "metrics": {
+    "test_auc_pr": 0.9515561928320391,
+    "test_roc_auc": 0.9533837221341701,
+    "best_f1": 0.8822103732423503,
+    "brier_score": 0.08342474978281463,
+    "accuracy": 0.8904418394950406,
+    "precision": 0.8839242350655658,
+    "recall": 0.8805031446540881,
+    "mcc": 0.779814192484,
+    "false_positive_rate": 0.10088644997889405,
+    "confusion_matrix": [
+      [
+        2130,
+        239
+      ],
+      [
+        247,
+        1820
+      ]
+    ],
+    "train_time_seconds": 38.970867400057614
+  },
+  "model_size_bytes": 10696595
+}

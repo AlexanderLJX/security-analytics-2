@@ -5,7 +5,7 @@ import re
 import math
 import pandas as pd
 import numpy as np
-from urllib.parse import urlparse
+import tldextract
 
 # Suspicious keywords commonly found in phishing emails (expanded)
 URGENCY_WORDS = {"urgent", "immediately", "action required", "verify", "suspend", "alert", "warning", "expire", 
@@ -87,6 +87,17 @@ def extract_text_features(subject, body):
     feats["url_count"] = len(urls)
     feats["has_url"] = 1 if urls else 0
     
+    # Initialize URL features to 0
+    feats["avg_url_length"] = 0
+    feats["max_url_length"] = 0
+    feats["url_has_ip"] = 0
+    feats["https_ratio"] = 0
+    feats["suspicious_tld_count"] = 0
+    feats["avg_subdomain_count"] = 0
+    feats["max_subdomain_count"] = 0
+    feats["avg_domain_entropy"] = 0
+    feats["avg_domain_length"] = 0
+
     # Analyze URLs if present
     if urls:
         feats["avg_url_length"] = np.mean([len(url) for url in urls])
@@ -94,20 +105,26 @@ def extract_text_features(subject, body):
         
         # Check for IP addresses in URLs
         ip_pattern = r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
-        feats["url_has_ip"] = 1 if any(re.search(ip_pattern, url) for url in urls) else 0
+        feats["url_has_ip"] = 1 if any(re.search(ip_pattern, tldextract.extract(url).domain) for url in urls) else 0
         
         # Check for HTTPS
         feats["https_ratio"] = sum(1 for url in urls if url.startswith("https")) / len(urls)
         
         # Count suspicious TLDs
-        suspicious_tlds = {".xyz", ".tk", ".ml", ".ga", ".cf", ".gq"}
-        feats["suspicious_tld_count"] = sum(1 for url in urls if any(tld in url for tld in suspicious_tlds))
-    else:
-        feats["avg_url_length"] = 0
-        feats["max_url_length"] = 0
-        feats["url_has_ip"] = 0
-        feats["https_ratio"] = 0
-        feats["suspicious_tld_count"] = 0
+        suspicious_tlds = {
+            ".xyz", ".buzz", ".club", ".work", ".top", ".support", ".online", ".info", ".loan", ".stream",
+            ".gq", ".ga", ".ml", ".cf", ".tk", ".link", ".click", ".site", ".website", ".live", ".tech"
+        }
+        
+        url_parts = [tldextract.extract(url) for url in urls]
+        feats["suspicious_tld_count"] = sum(1 for part in url_parts if part.suffix in suspicious_tlds)
+        
+        # Domain structure analysis
+        subdomain_counts = [len(part.subdomain.split('.')) if part.subdomain else 0 for part in url_parts]
+        feats["avg_subdomain_count"] = np.mean(subdomain_counts)
+        feats["max_subdomain_count"] = max(subdomain_counts)
+        feats["avg_domain_entropy"] = np.mean([entropy(part.domain) for part in url_parts if part.domain])
+        feats["avg_domain_length"] = np.mean([len(part.domain) for part in url_parts if part.domain])
     
     # Email-specific patterns (enhanced)
     feats["has_dear_pattern"] = 1 if re.search(r'\bdear\s+(customer|user|member|friend|valued)\b', combined_text.lower()) else 0
