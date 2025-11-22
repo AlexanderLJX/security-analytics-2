@@ -51,8 +51,10 @@ print("\n[1/4] Loading model...")
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name=BASE_MODEL,
     max_seq_length=MAX_SEQ_LENGTH,
-    load_in_4bit=True,  # Use 4-bit quantization to fit in T4 GPU memory
-    fast_inference=False,
+    load_in_4bit=False,  # False for LoRA 16bit
+    fast_inference=True,  # Enable vLLM fast inference
+    max_lora_rank=32,
+    gpu_memory_utilization=0.9,
 )
 
 # Setup chat template
