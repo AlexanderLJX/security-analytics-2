@@ -1035,7 +1035,69 @@ Based on the ensemble probability, the API recommends:
 | 0.7 - 0.9 | 70-90 | QUARANTINE |
 | 0.9 - 1.0 | 90-100 | BLOCK |
 
-### 10.7 Deploying to Production
+### 10.7 Splunk SIEM Integration
+
+The API includes built-in Splunk HEC (HTTP Event Collector) integration.
+
+#### Configuration Methods
+
+**Method 1: Environment Variables**
+```bash
+export SPLUNK_HEC_URL="https://your-splunk:8088/services/collector"
+export SPLUNK_HEC_TOKEN="your-hec-token"
+export SPLUNK_INDEX="security"
+python api_gateway.py
+```
+
+**Method 2: Runtime Configuration**
+```bash
+curl -X POST "http://localhost:8000/splunk/configure" \
+  -d "hec_url=https://your-splunk:8088/services/collector" \
+  -d "token=your-hec-token" \
+  -d "index=security"
+```
+
+**Method 3: .env File**
+```
+SPLUNK_HEC_URL=https://your-splunk:8088/services/collector
+SPLUNK_HEC_TOKEN=your-hec-token
+SPLUNK_INDEX=security
+```
+
+#### Splunk Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/splunk/status` | GET | Check if Splunk is configured |
+| `/splunk/configure` | POST | Configure HEC at runtime |
+| `/splunk/test` | POST | Send test event to Splunk |
+
+#### Event Structure
+
+When phishing is detected (risk > 50%), events are sent to Splunk with severity levels:
+- **CRITICAL**: Risk > 90%
+- **HIGH**: Risk 70-90%
+- **MEDIUM**: Risk 50-70%
+- **LOW**: Risk 30-50%
+- **INFO**: Risk < 30%
+
+#### Splunk Dashboard Query Examples
+
+```spl
+# All phishing detections
+index=security sourcetype=phishing_detection
+
+# High severity alerts only
+index=security sourcetype=phishing_detection event.severity=HIGH OR event.severity=CRITICAL
+
+# Detection rate over time
+index=security sourcetype=phishing_detection | timechart count by event.detection.classification
+
+# Top recommended actions
+index=security sourcetype=phishing_detection | stats count by event.detection.recommended_action
+```
+
+### 10.8 Deploying to Production
 
 #### Docker Deployment
 

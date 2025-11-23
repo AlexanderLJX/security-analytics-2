@@ -24,6 +24,12 @@ import os
 import sys
 from datetime import datetime
 import hashlib
+import socket
+import requests
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Add model directories to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'Random-Forest'))
@@ -44,6 +50,12 @@ ENSEMBLE_WEIGHTS = {
     "xgboost": 0.35,
     "llm": 0.40
 }
+
+# Splunk HEC Configuration (from environment or defaults)
+SPLUNK_HEC_URL = os.getenv("SPLUNK_HEC_URL", "")
+SPLUNK_HEC_TOKEN = os.getenv("SPLUNK_HEC_TOKEN", "")
+SPLUNK_INDEX = os.getenv("SPLUNK_INDEX", "security")
+SPLUNK_ENABLED = bool(SPLUNK_HEC_URL and SPLUNK_HEC_TOKEN)
 
 # ============================================================================
 # GLOBAL VARIABLES
@@ -263,6 +275,97 @@ def extract_basic_features(text: str) -> dict:
         "financial_keyword_count": sum(1 for w in ['bank', 'account', 'payment', 'money'] if w in text_lower),
         "credential_keyword_count": sum(1 for w in ['password', 'login', 'verify', 'confirm'] if w in text_lower),
     }
+
+# ============================================================================
+# SPLUNK INTEGRATION
+# ============================================================================
+
+def send_to_splunk(email_data: dict, prediction_result: dict, source: str = "ensemble"):
+    """Send prediction event to Splunk HTTP Event Collector"""
+    if not SPLUNK_ENABLED:
+        return False
+
+    try:
+        # Create email hash for deduplication
+        email_hash = hashlib.sha256(
+            f"{email_data.get('subject', '')}{email_data.get('body', '')}".encode()
+        ).hexdigest()
+
+        # Determine severity based on risk score
+        risk_score = prediction_result.get("risk_score", prediction_result.get("ensemble_probability", 0) * 100)
+        if isinstance(risk_score, float) and risk_score <= 1:
+            risk_score = int(risk_score * 100)
+
+        if risk_score > 90:
+            severity = "CRITICAL"
+        elif risk_score > 70:
+            severity = "HIGH"
+        elif risk_score > 50:
+            severity = "MEDIUM"
+        elif risk_score > 30:
+            severity = "LOW"
+        else:
+            severity = "INFO"
+
+        # Build Splunk HEC event payload
+        event = {
+            "time": datetime.utcnow().timestamp(),
+            "host": socket.gethostname(),
+            "source": f"phishing-gateway-{source}",
+            "sourcetype": "phishing_detection",
+            "index": SPLUNK_INDEX,
+            "event": {
+                "alert_id": f"phish-{source}-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "event_type": "email_analysis",
+                "severity": severity,
+                "email": {
+                    "subject": email_data.get("subject", "")[:100],
+                    "body_preview": email_data.get("body", "")[:200],
+                    "hash": email_hash,
+                    "size_bytes": len(email_data.get("body", ""))
+                },
+                "detection": {
+                    "classification": prediction_result.get("ensemble_label", prediction_result.get("label", "Unknown")),
+                    "is_phishing": prediction_result.get("ensemble_prediction", prediction_result.get("is_phishing", False)),
+                    "probability": prediction_result.get("ensemble_probability", prediction_result.get("phishing_probability", 0)),
+                    "risk_score": risk_score,
+                    "recommended_action": prediction_result.get("recommended_action", "REVIEW"),
+                    "models_used": prediction_result.get("models_used", [source]),
+                    "agreement_score": prediction_result.get("agreement_score", 1.0)
+                },
+                "actions_taken": {
+                    "email_quarantined": risk_score > 70,
+                    "sender_blocked": prediction_result.get("recommended_action") == "BLOCK",
+                    "soc_alerted": risk_score > 80
+                }
+            }
+        }
+
+        # Send to Splunk HEC
+        headers = {
+            "Authorization": f"Splunk {SPLUNK_HEC_TOKEN}",
+            "Content-Type": "application/json"
+        }
+
+        response = requests.post(
+            SPLUNK_HEC_URL,
+            json=event,
+            headers=headers,
+            timeout=5,
+            verify=False  # Set to True in production with proper SSL certs
+        )
+
+        if response.status_code == 200:
+            print(f"✓ Splunk: {event['event']['alert_id']} (severity: {severity})")
+            return True
+        else:
+            print(f"✗ Splunk error: {response.status_code}")
+            return False
+
+    except Exception as e:
+        print(f"✗ Splunk send failed: {e}")
+        return False
 
 # ============================================================================
 # PREDICTION FUNCTIONS
@@ -550,12 +653,24 @@ def model_info():
     return info
 
 @app.post("/predict", response_model=EnsemblePredictionResponse, tags=["Prediction"])
-def predict(email: EmailRequest):
+def predict(email: EmailRequest, send_splunk: bool = Query(True, description="Send result to Splunk if configured")):
     """
     Predict using ensemble of all available models.
     Returns combined prediction with individual model results.
+    Optionally sends to Splunk HEC if configured.
     """
-    return predict_ensemble(email.subject, email.body)
+    result = predict_ensemble(email.subject, email.body)
+
+    # Send to Splunk if enabled and phishing detected or high risk
+    if send_splunk and SPLUNK_ENABLED:
+        if result["ensemble_prediction"] or result["risk_score"] > 50:
+            send_to_splunk(
+                email_data={"subject": email.subject, "body": email.body},
+                prediction_result=result,
+                source="ensemble"
+            )
+
+    return result
 
 @app.post("/predict/rf", response_model=RFPredictionResponse, tags=["Prediction"])
 def predict_random_forest(email: EmailRequest):
@@ -674,6 +789,71 @@ def load_llm_endpoint():
         return {"status": "success", "message": "LLM model loaded successfully"}
     else:
         raise HTTPException(status_code=500, detail="Failed to load LLM model")
+
+# ============================================================================
+# SPLUNK ENDPOINTS
+# ============================================================================
+
+@app.get("/splunk/status", tags=["Splunk"])
+def splunk_status():
+    """Check Splunk HEC connection status"""
+    return {
+        "enabled": SPLUNK_ENABLED,
+        "hec_url": SPLUNK_HEC_URL[:50] + "..." if len(SPLUNK_HEC_URL) > 50 else SPLUNK_HEC_URL if SPLUNK_HEC_URL else None,
+        "index": SPLUNK_INDEX if SPLUNK_ENABLED else None,
+        "token_configured": bool(SPLUNK_HEC_TOKEN)
+    }
+
+@app.post("/splunk/configure", tags=["Splunk"])
+def configure_splunk(
+    hec_url: str = Query(..., description="Splunk HEC URL (e.g., https://splunk:8088/services/collector)"),
+    token: str = Query(..., description="Splunk HEC Token"),
+    index: str = Query("security", description="Splunk index name")
+):
+    """
+    Configure Splunk HEC at runtime.
+    This allows setting Splunk credentials without environment variables.
+    """
+    global SPLUNK_HEC_URL, SPLUNK_HEC_TOKEN, SPLUNK_INDEX, SPLUNK_ENABLED
+
+    SPLUNK_HEC_URL = hec_url
+    SPLUNK_HEC_TOKEN = token
+    SPLUNK_INDEX = index
+    SPLUNK_ENABLED = True
+
+    return {
+        "status": "success",
+        "message": "Splunk HEC configured",
+        "hec_url": hec_url[:50] + "..." if len(hec_url) > 50 else hec_url,
+        "index": index
+    }
+
+@app.post("/splunk/test", tags=["Splunk"])
+def test_splunk():
+    """Send a test event to Splunk to verify connection"""
+    if not SPLUNK_ENABLED:
+        raise HTTPException(status_code=400, detail="Splunk not configured. Use /splunk/configure first.")
+
+    test_result = {
+        "ensemble_prediction": True,
+        "ensemble_probability": 0.85,
+        "ensemble_label": "Phishing",
+        "risk_score": 85,
+        "recommended_action": "QUARANTINE",
+        "models_used": ["test"],
+        "agreement_score": 1.0
+    }
+
+    success = send_to_splunk(
+        email_data={"subject": "TEST: Splunk Connection Test", "body": "This is a test event from the Phishing Detection API."},
+        prediction_result=test_result,
+        source="test"
+    )
+
+    if success:
+        return {"status": "success", "message": "Test event sent to Splunk successfully"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to send test event to Splunk")
 
 # ============================================================================
 # MAIN
