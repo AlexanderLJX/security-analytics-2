@@ -17,9 +17,9 @@ import io
 app = FastAPI(title="Phishing Detection API", version="1.0")
 
 # Splunk HEC Configuration
-SPLUNK_HEC_URL = os.getenv("SPLUNK_HEC_URL", "https://your-splunk-server:8088/services/collector")
-SPLUNK_HEC_TOKEN = os.getenv("SPLUNK_HEC_TOKEN", "your-hec-token-here")
-SPLUNK_INDEX = os.getenv("SPLUNK_INDEX", "phishing_detection")
+SPLUNK_HEC_URL = os.getenv("SPLUNK_HEC_URL", "https://localhost:8088/services/collector/event")
+SPLUNK_HEC_TOKEN = os.getenv("SPLUNK_HEC_TOKEN", "5a12cc33-8aa3-4b90-93be-f7f50d3055e0")
+SPLUNK_INDEX = os.getenv("SPLUNK_INDEX", "XGBoost")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "1.0")
 
 class EmailRequest(BaseModel):
@@ -128,6 +128,11 @@ def send_to_splunk(event_data):
             "index": SPLUNK_INDEX,
             "event": event_data
         }
+        
+        # Print the full JSON payload to the server log for debugging
+        print("\n--- Sending to Splunk ---")
+        print(json.dumps(splunk_event, indent=2))
+        print("-------------------------\n")
         
         headers = {
             "Authorization": f"Splunk {SPLUNK_HEC_TOKEN}",
