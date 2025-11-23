@@ -184,8 +184,10 @@ async def predict(email: EmailRequest, request: Request):
             "features": indicators,
         }
 
-        # Send to Splunk
-        send_to_splunk(event_data)
+        # Send to Splunk if it's phishing OR if confidence is low (e.g., < 0.4)
+        # This captures all suspicious and ambiguous emails.
+        if result["is_phishing"] or result["confidence"] < 0.4:
+            send_to_splunk(event_data)
         
         return result
         
@@ -266,8 +268,10 @@ async def predict_csv(file: UploadFile = File(...)):
                 "features": indicators,
             }
             
-            # Send to Splunk
-            send_to_splunk(event_data)
+            # Send to Splunk if it's phishing OR if confidence is low (e.g., < 0.4)
+            # This captures all suspicious and ambiguous emails.
+            if result["is_phishing"] or result["confidence"] < 0.4:
+                send_to_splunk(event_data)
         
         return {
             "status": "success",
