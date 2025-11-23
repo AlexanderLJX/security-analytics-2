@@ -3,601 +3,631 @@
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AlexanderLJX/security-analytics-2/blob/main/ICT3214_Phishing_Detection_Demo.ipynb)
 [![Models](https://img.shields.io/badge/Models-3-blue)](https://github.com/AlexanderLJX/security-analytics-2)
-[![Dataset](https://img.shields.io/badge/Dataset-Enron-orange)](https://github.com/AlexanderLJX/security-analytics-2)
+[![Dataset](https://img.shields.io/badge/Dataset-Enron%2029K-orange)](https://github.com/AlexanderLJX/security-analytics-2)
 [![Python](https://img.shields.io/badge/Python-3.8+-yellow)](https://github.com/AlexanderLJX/security-analytics-2)
+[![LLM Model](https://img.shields.io/badge/HuggingFace-LLM--GRPO-green)](https://huggingface.co/AlexanderLJX/phishing-detection-qwen3-grpo)
+
+---
 
 ## Overview
 
-This project implements and compares **three advanced machine learning approaches** for detecting phishing emails in security analytics. The models are trained on the **Enron Email Corpus** (29,767 labeled emails) to identify phishing attempts with high accuracy.
-
-### Application Scenario
-**Enterprise Email Security System** - Automated phishing detection for corporate email gateways, protecting organizations from social engineering attacks, credential theft, and malware distribution.
+This project implements and compares **three machine learning approaches** for detecting phishing emails. The models are trained on the **Enron Email Corpus** (29,767 labeled emails) to identify phishing attempts with high accuracy.
 
 ### Models Implemented
-1. **Random Forest** - Traditional ensemble learning approach
-2. **XGBoost** - Gradient boosting with advanced text features
-3. **LLM-GRPO** - Large Language Model with Group Relative Policy Optimization
 
-**📊 Detailed performance comparison and analysis available in the project report.**
+| Model | Accuracy | F1-Score | Training Time | GPU Required |
+|-------|----------|----------|---------------|--------------|
+| **Random Forest** | 81.6% | 79.6% | ~4 seconds | No |
+| **XGBoost** | 89.2% | 88.5% | ~3 minutes | No |
+| **LLM-GRPO** | 99.0% | 99.0% | ~2-4 hours | Yes (15GB VRAM) |
+
+**Pre-trained LLM Model:** [AlexanderLJX/phishing-detection-qwen3-grpo](https://huggingface.co/AlexanderLJX/phishing-detection-qwen3-grpo)
 
 ---
 
-## 📁 Project Structure
+## Table of Contents
+
+1. [Quick Start - Google Colab](#quick-start---google-colab)
+2. [Project Structure](#project-structure)
+3. [Dataset Information](#dataset-information)
+4. [Environment Setup](#environment-setup)
+5. [Data Processing](#data-processing)
+6. [Model Training & Evaluation](#model-training--evaluation)
+7. [Reproducing Results](#reproducing-results)
+8. [API Usage](#api-usage)
+9. [Troubleshooting](#troubleshooting)
+10. [References](#references)
+
+---
+
+## Quick Start - Google Colab
+
+The fastest way to reproduce all results is using our Google Colab notebook:
+
+### **[Open Demo Notebook in Google Colab](https://colab.research.google.com/github/AlexanderLJX/security-analytics-2/blob/main/ICT3214_Phishing_Detection_Demo.ipynb)**
+
+### Colab Notebook Features
+
+1. **Automatic Environment Setup** - All dependencies installed automatically
+2. **Dataset Auto-Download** - Enron.csv cloned from GitHub
+3. **Train All 3 Models** - Random Forest, XGBoost, and LLM-GRPO evaluation
+4. **Real-time Metrics** - Accuracy, Precision, Recall, F1-Score, ROC-AUC
+5. **Visualization** - Performance comparison charts
+6. **Optional LLM Training** - Train your own LLM-GRPO model from scratch
+
+### Colab Usage Instructions
+
+1. Click the "Open in Colab" badge above
+2. Ensure GPU is enabled: `Runtime → Change runtime type → GPU (T4)`
+3. Run cells sequentially from top to bottom
+4. **For LLM evaluation**: Restart runtime after RF/XGBoost cells (GPU memory constraint)
+
+### Notebook Cell Structure
+
+| Cell | Description | Time |
+|------|-------------|------|
+| 1-6 | Environment setup & dependency installation | ~5 min |
+| 7-9 | Random Forest training & evaluation | ~10 sec |
+| 10-12 | XGBoost training & evaluation | ~3 min |
+| 13-16 | LLM-GRPO evaluation (pre-trained model) | ~5 min |
+| 17-19 | (Optional) Train your own LLM-GRPO | ~2-4 hours |
+| 20-24 | Model comparison & visualization | ~30 sec |
+
+---
+
+## Project Structure
 
 ```
 security-analytics-2/
-├── README.md                          # This file - User Manual
+├── README.md                              # This file - User Manual
 ├── ICT3214_Phishing_Detection_Demo.ipynb  # Google Colab Demo Notebook
-├── Enron.csv                          # Dataset (29,767 emails)
+├── Enron.csv                              # Dataset (29,767 emails)
 │
-├── Random-Forest/                     # Model 1: Random Forest Implementation
-│   ├── train_rf_phishing.py          # Training script
-│   ├── predict_rf_phishing.py        # Prediction interface
-│   ├── feature_extraction_rf.py      # Feature engineering
-│   ├── evaluate_rf_benchmark.py      # Performance benchmarks
-│   ├── api_server_fastapi.py         # REST API server (port 8001)
-│   ├── requirements.txt              # Dependencies
-│   └── README.md                      # Random Forest documentation
+├── Random-Forest/                         # Model 1: Random Forest
+│   ├── train_rf_phishing.py              # Training script
+│   ├── predict_rf_phishing.py            # Prediction interface
+│   ├── feature_extraction_rf.py          # Feature engineering (46 features)
+│   ├── evaluate_rf_benchmark.py          # Benchmark evaluation
+│   ├── api_server_fastapi.py             # REST API server
+│   ├── requirements.txt                  # Dependencies
+│   └── README.md                         # Model documentation
 │
-├── XgBoost/                           # Model 2: XGBoost Implementation
-│   ├── train_text_phishing.py        # Training script
-│   ├── predict_phishing.py           # Prediction interface
-│   ├── feature_extraction_text.py    # Advanced feature engineering
-│   ├── api_server_fastapi.py         # REST API server (port 8002)
-│   ├── phishing_text_model.joblib    # Trained model artifact
-│   ├── metrics_report.json           # Performance metrics
-│   ├── requirements.txt              # Dependencies
-│   └── README.md                      # XGBoost documentation
+├── XgBoost/                               # Model 2: XGBoost
+│   ├── train_text_phishing.py            # Training script
+│   ├── predict_phishing.py               # Prediction interface
+│   ├── feature_extraction_text.py        # Feature engineering (43 features + 946 polynomial)
+│   ├── evaluate_benchmark.py             # Benchmark evaluation
+│   ├── api_server_fastapi.py             # REST API server
+│   ├── phishing_text_model.joblib        # Pre-trained model
+│   ├── metrics_report.json               # Evaluation metrics
+│   ├── requirements.txt                  # Dependencies
+│   └── README.md                         # Model documentation
 │
-└── LLM-GRPO/                          # Model 3: LLM-GRPO (RECOMMENDED)
-    ├── train_phishing_llm_grpo.py    # Main training script
-    ├── predict_phishing_llm.py       # Prediction interface
-    ├── evaluate_phishing_model.py    # Basic evaluation
-    ├── evaluate_phishing_model_detailed.py  # Detailed evaluation with reasoning
-    ├── quick_start_llm.py            # Quick start script
-    ├── compare_all_models.py         # Cross-model comparison
-    ├── config_llm.yaml               # Configuration file
-    ├── requirements_llm.txt          # LLM dependencies
-    ├── setup_and_train.sh            # Automated setup (Linux/WSL)
-    ├── RUN_NOW.sh                    # Quick run script
-    ├── phishing_grpo_lora/           # Trained LoRA adapters
-    ├── evaluation_results.txt        # Evaluation metrics
-    ├── evaluation_detailed.txt       # Detailed evaluation report
-    ├── README_LLM_GRPO.md            # Comprehensive LLM documentation
-    └── README.md                      # Quick reference
+└── LLM-GRPO/                              # Model 3: LLM with GRPO
+    ├── train_phishing_llm_grpo.py        # Full training script
+    ├── predict_phishing_llm.py           # Prediction interface
+    ├── evaluate_phishing_model_detailed.py  # Detailed evaluation
+    ├── api_server_fastapi.py             # REST API server
+    ├── requirements_llm.txt              # LLM dependencies
+    ├── Enron.csv                         # Dataset copy
+    └── README_LLM_GRPO.md                # Comprehensive documentation
 ```
 
 ---
 
-## 🚀 Quick Start Guide
+## Dataset Information
 
-### Prerequisites
+### Enron Email Corpus
 
-- **Python 3.8+**
-- **For Random Forest / XGBoost**: 4GB+ RAM, any CPU
-- **For LLM-GRPO**: 16GB+ VRAM GPU (CUDA), 20GB+ disk space
+| Property | Value |
+|----------|-------|
+| **Total Emails** | 29,767 |
+| **Legitimate (Ham)** | 15,791 (53.1%) |
+| **Phishing (Spam)** | 13,778 (46.3%) |
+| **Format** | CSV |
+| **Columns** | `subject`, `body`, `label` |
 
-### Option 1: Google Colab Demo (Recommended for Quick Testing)
+### Data Split (used by all models)
 
-**📓 [Open Demo Notebook in Google Colab](https://colab.research.google.com/github/AlexanderLJX/security-analytics-2/blob/main/ICT3214_Phishing_Detection_Demo.ipynb)**
+| Split | Samples | Percentage |
+|-------|---------|------------|
+| Training | 20,106 | 68% |
+| Validation | 3,549 | 12% |
+| Test | 5,914 | 20% |
 
-1. Click the Colab badge above or the link
-2. Upload `Enron.csv` dataset when prompted
-3. Run all cells to train and compare all three models
-4. Test with interactive prediction demo
+**Random State:** 42 (for reproducibility)
 
-**Advantages:**
-- No local setup required
-- GPU available for free (T4)
-- All visualizations included
-- Side-by-side model comparison
+### Label Encoding
 
-### Option 2: Local Setup (Recommended for Production)
+| Original Label | Standardized | Binary |
+|----------------|--------------|--------|
+| `0`, `ham`, `legitimate` | LEGITIMATE | 0 |
+| `1`, `spam`, `phishing` | PHISHING | 1 |
 
-#### Step 1: Clone/Download Repository
+---
+
+## Environment Setup
+
+### Option 1: Google Colab (Recommended)
+
+No setup required - all dependencies are installed automatically in the notebook.
+
+### Option 2: Local Installation
+
+#### System Requirements
+
+| Component | Random Forest / XGBoost | LLM-GRPO |
+|-----------|------------------------|----------|
+| **Python** | 3.8+ | 3.8+ |
+| **RAM** | 4GB+ | 16GB+ |
+| **GPU** | Not required | NVIDIA GPU, 15GB+ VRAM |
+| **CUDA** | Not required | 11.8 or 12.1 |
+| **Disk** | 1GB | 20GB+ |
+
+#### Installation Steps
+
+**Step 1: Clone Repository**
 ```bash
+git clone https://github.com/AlexanderLJX/security-analytics-2.git
 cd security-analytics-2
 ```
 
-#### Step 2: Choose Your Model
+**Step 2: Create Virtual Environment**
+```bash
+python -m venv venv
 
-##### **🥇 LLM-GRPO (Best Accuracy - 96%)**
+# Linux/Mac
+source venv/bin/activate
 
+# Windows
+venv\Scripts\activate
+```
+
+**Step 3: Install Dependencies**
+
+For Random Forest:
+```bash
+cd Random-Forest
+pip install -r requirements.txt
+```
+
+For XGBoost:
+```bash
+cd XgBoost
+pip install -r requirements.txt
+```
+
+For LLM-GRPO:
 ```bash
 cd LLM-GRPO
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install --upgrade pip
+# Install PyTorch with CUDA
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
-pip install -r requirements_llm.txt
 
-# Verify GPU availability
-python -c "import torch; print(f'CUDA Available: {torch.cuda.is_available()}')"
+# Install Unsloth and dependencies
+pip install unsloth vllm transformers trl datasets pandas scikit-learn
 
-# Train model (~1 hour on RTX 4090)
-python train_phishing_llm_grpo.py
+# Verify GPU
+python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else None}')"
+```
 
-# Evaluate model
-python evaluate_phishing_model_detailed.py
+---
 
-# Make predictions
-python predict_phishing_llm.py
+## Data Processing
+
+### Preprocessing Pipeline
+
+All models follow a consistent preprocessing pipeline:
+
+```python
+import pandas as pd
+import re
+
+# 1. Load dataset
+df = pd.read_csv('Enron.csv')
+
+# 2. Handle missing values
+df = df.dropna(subset=['body'])
+
+# 3. Standardize labels
+def standardize_label(label):
+    label_str = str(label).lower().strip()
+    if any(word in label_str for word in ['spam', 'phishing', '1']):
+        return "PHISHING"  # or 1
+    elif any(word in label_str for word in ['ham', 'legit', '0']):
+        return "LEGITIMATE"  # or 0
+    return None
+
+df['label_binary'] = df['label'].apply(standardize_label)
+
+# 4. Clean text
+def clean_text(text):
+    text = str(text)
+    text = re.sub(r'\s+', ' ', text)  # Normalize whitespace
+    return text.strip()
+
+df['clean_body'] = df['body'].apply(clean_text)
+
+# 5. Train/Test split (consistent across all models)
+from sklearn.model_selection import train_test_split
+
+train_val, test = train_test_split(df, test_size=0.2, random_state=42, stratify=df['label_binary'])
+train, val = train_test_split(train_val, test_size=0.15, random_state=42, stratify=train_val['label_binary'])
+```
+
+### Feature Extraction
+
+#### Random Forest (46 features)
+- URL analysis (count, suspicious TLDs, IP addresses)
+- Text statistics (length, word count, exclamation marks)
+- Keyword detection (urgency, financial, credentials)
+- Pattern matching (PII requests, repeated characters)
+
+#### XGBoost (43 base + 946 polynomial features)
+- Subject/body length and entropy
+- Suspicious word ratios
+- HTML detection
+- URL pattern analysis
+- Polynomial feature interactions (degree 2)
+
+#### LLM-GRPO (contextual embeddings)
+- Full email text (up to 2048 tokens)
+- No manual feature engineering
+- Learns representations during training
+
+---
+
+## Model Training & Evaluation
+
+### Model 1: Random Forest
+
+```bash
+cd Random-Forest
+python train_rf_phishing.py
 ```
 
 **Training Output:**
 ```
-Loading Qwen3-4B-Base model with 4-bit quantization...
-✓ Model loaded successfully
+============================================================
+RANDOM FOREST PHISHING EMAIL DETECTION
+============================================================
+[1] Loading and preparing dataset...
+   Total samples: 29569
+   Phishing ratio: 46.60%
 
-Stage 1: Pre-finetuning (Supervised Fine-Tuning)...
-Training on 93 examples to learn format...
-✓ Pre-finetuning completed
+[2] Extracting features...
+   Features extracted: 46
 
-Stage 2: GRPO Training (Reinforcement Learning)...
-Step 100/500 | reward: 5.78 | kl: 0.0045
-Step 200/500 | reward: 8.12 | kl: 0.0089
-Step 500/500 | reward: 12.45 | kl: 0.0145
-✓ GRPO training completed
+[5] Training Random Forest model...
+   Training time: 3.65s
+   OOB score: 0.8218
 
-Saving model to ./phishing_grpo_lora/
-✓ Model saved successfully
+[7] Test Set Evaluation:
+   Accuracy:  0.8160
+   Precision: 0.8243
+   Recall:    0.7692
+   F1 Score:  0.7958
+   ROC-AUC:   0.9015
+
+[9] Saving model...
+   Model saved: checkpoints/phishing_detector/rf_phishing_detector.joblib
 ```
 
-**Evaluation Output:**
-```
-EVALUATION RESULTS
-================================================================================
-Dataset: Enron.csv
-Samples evaluated: 500
-
-Accuracy:  96.00%
-Precision: 96.43%
-Recall:    94.74%
-F1-Score:  95.58%
-
-Confusion Matrix:
-[[233   9]
- [ 11 247]]
-
-Classification Report:
-              precision    recall  f1-score   support
-  LEGITIMATE       0.95      0.96      0.96       242
-    PHISHING       0.96      0.95      0.96       258
-
-    accuracy                           0.96       500
-   macro avg       0.96      0.96      0.96       500
-weighted avg       0.96      0.96      0.96       500
-```
-
-##### **XGBoost (Best Balance - 89%)**
+### Model 2: XGBoost
 
 ```bash
 cd XgBoost
-
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-pip install -r requirements.txt
-
-# Train model
 python train_text_phishing.py
-
-# Test predictions
-python predict_phishing.py
-
-# Start API server
-python api_server_fastapi.py 8002
 ```
 
-##### **Random Forest (Fastest - 87%)**
+**Training Output:**
+```
+============================================================
+TEXT-BASED PHISHING EMAIL DETECTION
+============================================================
+[1] Loading Enron dataset...
+   Total samples: 29767
+
+[6] Training model with early stopping...
+   Feature count after polynomial interactions: 946
+[0]    validation_0-aucpr:0.85508
+[500]  validation_0-aucpr:0.94206
+[1207] validation_0-aucpr:0.94452
+
+[8] Test set performance:
+   ROC-AUC: 0.9547
+
+[10] Classification Report (with optimal threshold):
+   Accuracy: 0.8921
+   Precision: 0.8815
+   Recall: 0.8879
+   F1 Score: 0.8847
+
+[12] Saving model...
+   Model saved to: phishing_text_model.joblib
+```
+
+### Model 3: LLM-GRPO
+
+#### Option A: Use Pre-trained Model (Recommended)
 
 ```bash
-cd Random-Forest
+cd LLM-GRPO
+python evaluate_phishing_model_detailed.py
+```
 
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+The script automatically downloads the pre-trained model from HuggingFace:
+`AlexanderLJX/phishing-detection-qwen3-grpo`
 
-pip install -r requirements.txt
+**Evaluation Output:**
+```
+================================================================================
+PHISHING DETECTION MODEL - DETAILED EVALUATION
+================================================================================
+[1/4] Loading model...
+Loaded LoRA from: AlexanderLJX/phishing-detection-qwen3-grpo
 
-# Train model
-python train_rf_phishing.py
+[3/4] Running evaluation...
+Evaluating on 500 samples
 
-# Test predictions
-python predict_rf_phishing.py
+[4/4] Computing metrics...
+================================================================================
+EVALUATION RESULTS
+================================================================================
+Overall Metrics:
+  Accuracy:  0.9899
+  Precision: 1.0000
+  Recall:    0.9796
+  F1 Score:  0.9897
+================================================================================
+```
 
-# Start API server
-python api_server_fastapi.py 8001
+#### Option B: Train Your Own Model
+
+```bash
+cd LLM-GRPO
+python train_phishing_llm_grpo.py
+```
+
+**Training Stages:**
+1. **Pre-finetuning (SFT)**: Teaches model the output format (~10 min)
+2. **GRPO Training**: Reinforcement learning optimization (~2-4 hours)
+
+**Configuration (in train_phishing_llm_grpo.py):**
+```python
+MAX_SEQ_LENGTH = 4096      # Token limit per email
+LORA_RANK = 32             # LoRA adapter rank
+PRE_FINETUNE_SAMPLES = 2000
+GRPO_MAX_STEPS = 1000      # Training iterations
 ```
 
 ---
 
-## 📊 Dataset Information
+## Reproducing Results
 
-### Enron Email Corpus
+### Complete Reproduction via Colab
 
-**Source**: Enron Corporation email dataset (publicly available)
-**Total Emails**: 29,767
-**Format**: CSV with columns `subject`, `body`, `label`
+1. Open: [Colab Notebook](https://colab.research.google.com/github/AlexanderLJX/security-analytics-2/blob/main/ICT3214_Phishing_Detection_Demo.ipynb)
 
-**Class Distribution:**
-- Legitimate emails: ~53% (15,787 emails)
-- Phishing emails: ~47% (13,980 emails)
+2. Enable GPU: `Runtime → Change runtime type → T4 GPU`
 
-**Data Split:**
-- Training: 70% (20,837 emails)
-- Validation: 15% (4,465 emails)
-- Test: 15% (4,465 emails)
+3. Run cells 1-6 (Setup)
 
-**Preprocessing:**
-- Removed null/empty values
-- Combined subject and body for analysis
-- Balanced class distribution maintained across splits
-- No data augmentation (natural distribution preserved)
+4. Run cells 7-9 (Random Forest)
+   - Expected: Accuracy ~81.6%, F1 ~79.6%
+
+5. Run cells 10-12 (XGBoost)
+   - Expected: Accuracy ~89.2%, F1 ~88.5%
+
+6. **Restart runtime** (required for GPU memory)
+
+7. Run cells 1-6 again (re-setup after restart)
+
+8. Run cells 13-16 (LLM-GRPO evaluation)
+   - Expected: Accuracy ~99%, F1 ~99%
+
+9. Run cells 20-24 (Comparison visualization)
+
+### Expected Final Comparison
+
+```
+================================================================================
+MODEL COMPARISON
+================================================================================
+        Model  Accuracy  Precision   Recall  F1-Score  ROC-AUC
+Random Forest   0.8160     0.8243   0.7692    0.7958   0.9015
+      XGBoost   0.8921     0.8815   0.8879    0.8847   0.9547
+     LLM-GRPO   0.9899     1.0000   0.9796    0.9897   0.9899
+================================================================================
+```
+
+### Local Reproduction
+
+```bash
+# Clone and setup
+git clone https://github.com/AlexanderLJX/security-analytics-2.git
+cd security-analytics-2
+
+# Random Forest
+cd Random-Forest
+pip install -r requirements.txt
+python train_rf_phishing.py
+# Metrics saved to: checkpoints/phishing_detector/rf_phishing_detector.joblib
+
+# XGBoost
+cd ../XgBoost
+pip install -r requirements.txt
+python train_text_phishing.py
+# Metrics saved to: metrics_report.json
+
+# LLM-GRPO (requires GPU)
+cd ../LLM-GRPO
+pip install torch --index-url https://download.pytorch.org/whl/cu118
+pip install unsloth vllm transformers trl datasets pandas scikit-learn
+python evaluate_phishing_model_detailed.py
+```
 
 ---
 
-## 🔬 Technical Implementation
+## API Usage
 
-**Detailed technical specifications, feature engineering details, evaluation methodology, and benchmark results are documented in the project report.**
+### Starting API Servers
 
-For implementation details, see individual model folders:
-- **Random Forest**: [Random-Forest/](Random-Forest/)
-- **XGBoost**: [XgBoost/](XgBoost/)
-- **LLM-GRPO**: [LLM-GRPO/](LLM-GRPO/)
+```bash
+# Random Forest API (port 8001)
+cd Random-Forest
+python api_server_fastapi.py
 
----
+# XGBoost API (port 8002)
+cd XgBoost
+python api_server_fastapi.py
 
-## 💻 Usage Instructions
+# LLM-GRPO API (port 8003)
+cd LLM-GRPO
+python api_server_fastapi.py
+```
 
-### 1. Interactive Prediction (Python)
+### API Endpoints
+
+#### Health Check
+```bash
+curl http://localhost:8001/health
+```
+
+#### Single Prediction
+```bash
+curl -X POST http://localhost:8001/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "subject": "URGENT: Verify Your Account",
+    "body": "Click here to verify: http://suspicious-link.tk"
+  }'
+```
+
+#### Response Format
+```json
+{
+  "prediction": "PHISHING",
+  "confidence": 0.94,
+  "reasoning": "Urgency tactics, suspicious URL domain...",
+  "recommended_action": "BLOCK"
+}
+```
+
+### Python API
 
 ```python
-# LLM-GRPO Prediction
+# LLM-GRPO Example
 from predict_phishing_llm import load_model, predict_single_email
 
 model, tokenizer = load_model()
 
-email_text = """
-Subject: Your package could not be delivered
+email = """
+Subject: Your package delivery failed
 
 Dear Customer,
-We attempted to deliver your package but nobody was home.
-Click here to reschedule: http://delivery-tracking.tk/reschedule?id=123
-Please confirm your address and payment details.
+Your package could not be delivered. Click here to reschedule:
+http://delivery-tracking.tk/reschedule
+Please confirm your payment details.
 """
 
-result = predict_single_email(model, tokenizer, email_text)
-
+result = predict_single_email(model, tokenizer, email)
 print(f"Prediction: {result['prediction']}")
 print(f"Confidence: {result['confidence']:.2%}")
-print(f"Reasoning:\n{result['reasoning']}")
-```
-
-**Output:**
-```
-Prediction: PHISHING
-Confidence: 93%
-Reasoning: This email shows multiple phishing indicators...
-```
-
-### 2. Batch Processing (CSV)
-
-```bash
-# Process entire CSV file
-python predict_phishing_llm.py \
-    --mode batch \
-    --file emails_to_classify.csv \
-    --content_col text \
-    --output predictions_with_reasoning.csv \
-    --max_samples 1000
-```
-
-**Input CSV:**
-```csv
-email_id,text
-1,"Subject: Meeting tomorrow..."
-2,"Subject: URGENT Account Suspension..."
-```
-
-**Output CSV:**
-```csv
-email_id,text,prediction,confidence,reasoning
-1,"Subject: Meeting tomorrow...",LEGITIMATE,0.97,"Standard business communication..."
-2,"Subject: URGENT Account Suspension...",PHISHING,0.94,"Urgency tactics, suspicious URL..."
-```
-
-### 3. REST API Server
-
-```bash
-# Start API server
-cd LLM-GRPO
-python api_server_fastapi.py 8003
-```
-
-**API Endpoints:**
-
-```bash
-# Health check
-curl http://localhost:8003/health
-
-# Single prediction
-curl -X POST http://localhost:8003/predict \
-  -H "Content-Type: application/json" \
-  -d '{
-    "subject": "URGENT: Verify Account",
-    "body": "Click here to verify: http://phishing.tk"
-  }'
-
-# Response
-{
-  "prediction": "PHISHING",
-  "confidence": 0.92,
-  "phishing_probability": 0.92,
-  "risk_score": 92,
-  "reasoning": "Urgency tactics combined with suspicious domain...",
-  "recommended_action": "BLOCK",
-  "timestamp": "2024-11-21T10:30:00Z"
-}
-```
-
-### 4. Command Line Interface
-
-```bash
-# Interactive mode
-python predict_phishing_llm.py
-
-# Direct prediction
-python predict_phishing_llm.py --text "Your account has been suspended..."
-
-# Evaluate on test set
-python evaluate_phishing_model_detailed.py \
-    --dataset Enron.csv \
-    --samples 500 \
-    --output detailed_evaluation.txt
+print(f"Reasoning: {result['reasoning']}")
 ```
 
 ---
 
-## 📈 Model Comparison & Deployment Strategies
+## Troubleshooting
 
-**Detailed model comparison, cost-benefit analysis, security considerations, and deployment recommendations are available in the project report.**
-
----
-
-## 🛠️ Troubleshooting
-
-### Common Issues & Solutions
-
-#### Issue 1: CUDA Out of Memory (LLM Training)
+### Issue 1: CUDA Out of Memory
 
 **Error:**
 ```
-RuntimeError: CUDA out of memory. Tried to allocate 2.00 GB
+RuntimeError: CUDA out of memory
 ```
 
 **Solutions:**
+1. Restart Colab runtime before LLM cells
+2. Reduce evaluation samples: `EVAL_SAMPLES = 20`
+3. Use 4-bit quantization: `load_in_4bit=True`
+
+### Issue 2: Model Not Found
+
+**Error:**
+```
+Repository Not Found for url: https://huggingface.co/...
+```
+
+**Solution:**
+Ensure correct HuggingFace model path:
 ```python
-# Option 1: Reduce LoRA rank (in train_phishing_llm_grpo.py)
-LORA_RANK = 16  # Default: 32
-
-# Option 2: Reduce sequence length
-MAX_SEQ_LENGTH = 1024  # Default: 2048
-
-# Option 3: Increase gradient accumulation
-gradient_accumulation_steps = 8  # Default: 4
-
-# Option 4: Reduce batch generation
-num_generations = 2  # Default: 4
+LORA_PATH = "AlexanderLJX/phishing-detection-qwen3-grpo"
 ```
 
-#### Issue 2: Poor LLM Performance (Low Accuracy)
+### Issue 3: Import Errors
 
-**Symptoms**: Model outputs random text or incorrect format
+**Error:**
+```
+ModuleNotFoundError: No module named 'unsloth'
+```
 
-**Solutions:**
+**Solution:**
 ```bash
-# Increase pre-finetuning samples
-PRE_FINETUNE_SAMPLES = 200  # Default: 93
-
-# Run more GRPO steps
-GRPO_MAX_STEPS = 1000  # Default: 500
-
-# Check dataset format
-python -c "import pandas as pd; df = pd.read_csv('Enron.csv'); print(df.head())"
+pip install unsloth vllm transformers trl
 ```
 
-#### Issue 3: Slow Training
+### Issue 4: Slow Training
 
-**Expected**: 1 hour on RTX 4090, 3-4 hours on RTX 3060
+**Expected Times:**
+- Random Forest: ~5 seconds
+- XGBoost: ~3 minutes
+- LLM-GRPO: ~2-4 hours (T4 GPU)
 
 **If slower:**
-```bash
-# Check GPU utilization
-nvidia-smi
+- Check GPU utilization: `nvidia-smi`
+- Reduce `GRPO_MAX_STEPS` for testing
 
-# Should show >90% GPU usage
-# If <50%, possible issues:
-# 1. CPU bottleneck in data loading
-# 2. Incorrect CUDA installation
-# 3. Thermal throttling
-```
+### Issue 5: Low LLM Accuracy
 
-#### Issue 4: Model Not Found
-
-**Error:**
-```
-FileNotFoundError: phishing_grpo_lora/ not found
-```
-
-**Solution:**
-```bash
-# Train model first
-python train_phishing_llm_grpo.py
-
-# Or download pre-trained model
-# (if available from team repository)
-```
-
-#### Issue 5: Dataset Format Issues
-
-**Error:**
-```
-KeyError: 'label' not found in columns
-```
-
-**Solution:**
-```python
-# Check column names
-import pandas as pd
-df = pd.read_csv('Enron.csv')
-print(df.columns)
-
-# If different column names, update in scripts:
-# train_phishing_llm_grpo.py, line ~50
-CONTENT_COL = 'your_content_column_name'
-LABEL_COL = 'your_label_column_name'
-```
+**Solutions:**
+1. Increase `PRE_FINETUNE_SAMPLES` to 200+
+2. Increase `GRPO_MAX_STEPS` to 500+
+3. Verify dataset labels are correct
 
 ---
 
-## 📚 Detailed Documentation
-
-### Individual Model Documentation
-
-- **Random Forest**: See [Random-Forest/README.md](Random-Forest/README.md)
-- **XGBoost**: See [XgBoost/README.md](XgBoost/README.md)
-- **LLM-GRPO**: See [LLM-GRPO/README_LLM_GRPO.md](LLM-GRPO/README_LLM_GRPO.md)
-
-### Google Colab Notebook
-
-- **Interactive Demo**: [ICT3214_Phishing_Detection_Demo.ipynb](ICT3214_Phishing_Detection_Demo.ipynb)
-  - All three models in one notebook
-  - Data exploration and visualization
-  - Performance comparison charts
-  - Interactive prediction demo
-  - Ready for submission
-
----
-
-## 👥 Individual Contributions
-
-| Team Member | Role | Contributions |
-|-------------|------|---------------|
-| **Student 1** | Random Forest Lead | - Feature engineering design<br>- Random Forest implementation<br>- API server development<br>- Performance benchmarking |
-| **Student 2** | XGBoost Lead | - Advanced feature extraction<br>- XGBoost implementation<br>- SHAP analysis integration<br>- Robustness evaluation |
-| **Student 3** | LLM-GRPO Lead | - LLM training pipeline<br>- GRPO reward function design<br>- Model evaluation framework<br>- Comparative analysis |
-| **All Members** | Collaboration | - Dataset preparation<br>- Code review and testing<br>- Documentation<br>- Final report and presentation |
-
----
-
-## 🎓 Project Deliverables
-
-### ✅ Three ML/AI Models Implemented
-- Random Forest: Traditional ensemble learning
-- XGBoost: Advanced gradient boosting
-- LLM-GRPO: State-of-the-art deep learning with reinforcement learning
-
-### ✅ Complete Documentation
-- Comprehensive user manual (this README)
-- Individual model documentation in respective folders
-- Google Colab interactive demo notebook
-- Detailed project report with performance analysis
-
-### ✅ Reproducible Results
-- Step-by-step setup instructions
-- Training scripts for all models
-- Evaluation and prediction scripts
-- Example API implementations
-
----
-
-## 📖 References
+## References
 
 ### Datasets
-1. Enron Email Corpus: https://www.cs.cmu.edu/~enron/
-2. Phishing Email Dataset: Kaggle Spam/Ham Collection
+- Enron Email Corpus: https://www.cs.cmu.edu/~enron/
 
-### Frameworks & Libraries
-1. Scikit-learn Documentation: https://scikit-learn.org/
-2. XGBoost Documentation: https://xgboost.readthedocs.io/
-3. Unsloth (LLM Framework): https://github.com/unslothai/unsloth
-4. Qwen3 Model: https://huggingface.co/Qwen/Qwen3-4B-Base
+### Frameworks
+- Scikit-learn: https://scikit-learn.org/
+- XGBoost: https://xgboost.readthedocs.io/
+- Unsloth: https://github.com/unslothai/unsloth
+- Qwen3 Model: https://huggingface.co/Qwen/Qwen3-4B-Base
 
 ### Research Papers
-1. Random Forest: Breiman, L. (2001). "Random Forests". Machine Learning.
-2. XGBoost: Chen, T., & Guestrin, C. (2016). "XGBoost: A Scalable Tree Boosting System". KDD.
-3. GRPO: Shao, Z. et al. (2024). "DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models". arXiv:2402.03300.
-
-### Phishing Detection Literature
-1. Abu-Nimeh, S. et al. (2007). "A comparison of machine learning techniques for phishing detection". eCrime.
-2. Fette, I. et al. (2007). "Learning to detect phishing emails". WWW.
-3. Basnet, R. et al. (2008). "Feature Selection for Improved Phishing Detection". ICMLC.
+1. Breiman, L. (2001). "Random Forests". Machine Learning.
+2. Chen, T., & Guestrin, C. (2016). "XGBoost: A Scalable Tree Boosting System". KDD.
+3. Shao, Z. et al. (2024). "DeepSeekMath: Pushing the Limits of Mathematical Reasoning". arXiv:2402.03300.
 
 ---
 
-## 📄 License
+## License
 
-This project is developed for **ICT3214 Security Analytics Coursework 2** at Singapore Institute of Technology (SIT).
+This project is developed for **ICT3214 Security Analytics Coursework 2**.
 
 - Random Forest & XGBoost: MIT License
-- LLM Implementation: Apache 2.0 (Qwen3 model license)
+- LLM Implementation: Apache 2.0 (Qwen3 license)
 - Unsloth Framework: LGPL-3.0
-
-**For Educational Use Only** - Not licensed for commercial deployment without proper attribution.
-
----
-
-## 🆘 Support
-
-### For Technical Issues:
-1. Check [Troubleshooting](#-troubleshooting) section
-2. Review individual model README files
-3. Check training logs in respective output directories
-
-### For Questions:
-- **Random Forest**: Contact Student 1
-- **XGBoost**: Contact Student 2
-- **LLM-GRPO**: Contact Student 3
-- **General**: Email all team members
-
----
-
-## 🚀 Future Enhancements
-
-### Short-term (Next Iteration)
-- [ ] Implement hybrid deployment architecture
-- [ ] Add real-time streaming pipeline
-- [ ] Integrate with Splunk SIEM
-- [ ] Docker containerization for all models
-- [ ] Multi-language support (Chinese, Spanish)
-
-### Long-term (Production)
-- [ ] Active learning loop (continuous improvement from feedback)
-- [ ] Multi-modal analysis (analyze attachments, images)
-- [ ] Adversarial training (robustness to evasion)
-- [ ] A/B testing framework
-- [ ] Integration with Microsoft 365 / Google Workspace
-- [ ] Mobile app for on-the-go email verification
-
----
-
-## 🏆 Conclusion
-
-This project successfully demonstrates three ML/AI approaches for phishing detection, with **LLM-GRPO achieving 96% accuracy** - the highest performance. The explainable AI capabilities make it suitable for enterprise deployment where security analysts need to understand and validate automated decisions.
-
-The hybrid deployment strategy combines the speed of XGBoost with the accuracy of LLM-GRPO, offering a practical solution for real-world email security systems.
-
-**Key Achievement**: **7-9% accuracy improvement over traditional ML**, translating to **96% reduction in missed phishing attacks**, significantly enhancing organizational security posture.
 
 ---
 
 **ICT3214 Security Analytics - Coursework 2**
 **Singapore Institute of Technology**
-**Academic Year 2024/2025**
 
 ---
 
