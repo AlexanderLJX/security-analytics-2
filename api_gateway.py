@@ -150,10 +150,10 @@ def load_rf_model():
         rf_feature_names = model_data["feature_names"]
         rf_metrics = model_data.get("metrics", {})
         models_loaded["rf"] = True
-        print(f"✓ Random Forest model loaded from {RF_MODEL_PATH}")
+        print(f"[OK] Random Forest model loaded from {RF_MODEL_PATH}")
         return True
     except Exception as e:
-        print(f"✗ Failed to load RF model: {e}")
+        print(f"[FAIL] Failed to load RF model: {e}")
         return False
 
 def load_xgboost_model():
@@ -170,10 +170,10 @@ def load_xgboost_model():
         xgb_threshold = model_data.get("threshold", 0.5)
         xgb_metrics = model_data.get("metrics", {})
         models_loaded["xgboost"] = True
-        print(f"✓ XGBoost model loaded from {XGBOOST_MODEL_PATH}")
+        print(f"[OK] XGBoost model loaded from {XGBOOST_MODEL_PATH}")
         return True
     except Exception as e:
-        print(f"✗ Failed to load XGBoost model: {e}")
+        print(f"[FAIL] Failed to load XGBoost model: {e}")
         return False
 
 def load_llm_model():
@@ -183,7 +183,7 @@ def load_llm_model():
     try:
         import torch
         if not torch.cuda.is_available():
-            print("✗ LLM model requires GPU - CUDA not available")
+            print("[SKIP] LLM model requires GPU - CUDA not available")
             return False
 
         from unsloth import FastLanguageModel
@@ -226,13 +226,13 @@ Respond with either "PHISHING" or "LEGITIMATE"."""
         llm_tokenizer.chat_template = chat_template
 
         models_loaded["llm"] = True
-        print(f"✓ LLM-GRPO model loaded from {LLM_MODEL_NAME}")
+        print(f"[OK] LLM-GRPO model loaded from {LLM_MODEL_NAME}")
         return True
     except ImportError:
-        print("✗ LLM dependencies not installed (unsloth, vllm)")
+        print("[SKIP] LLM dependencies not installed (unsloth, vllm)")
         return False
     except Exception as e:
-        print(f"✗ Failed to load LLM model: {e}")
+        print(f"[FAIL] Failed to load LLM model: {e}")
         return False
 
 # ============================================================================
@@ -357,14 +357,14 @@ def send_to_splunk(email_data: dict, prediction_result: dict, source: str = "ens
         )
 
         if response.status_code == 200:
-            print(f"✓ Splunk: {event['event']['alert_id']} (severity: {severity})")
+            print(f"[SPLUNK] {event['event']['alert_id']} (severity: {severity})")
             return True
         else:
-            print(f"✗ Splunk error: {response.status_code}")
+            print(f"[ERROR] Splunk error: {response.status_code}")
             return False
 
     except Exception as e:
-        print(f"✗ Splunk send failed: {e}")
+        print(f"[ERROR] Splunk send failed: {e}")
         return False
 
 # ============================================================================
@@ -596,7 +596,7 @@ async def startup_event():
     # load_llm_model()  # Uncomment if GPU available
 
     loaded = [m for m, l in models_loaded.items() if l]
-    print(f"\n✓ Models loaded: {loaded}")
+    print(f"\n[OK] Models loaded: {loaded}")
     print("="*60 + "\n")
 
 @app.get("/", tags=["General"])
